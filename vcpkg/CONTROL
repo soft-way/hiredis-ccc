@@ -1,0 +1,4 @@
+Source: hiredisccc
+Version: 1.0.0
+Description: Hiredis c client
+Build-Depends: libevent

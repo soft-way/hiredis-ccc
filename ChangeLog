@@ -1,0 +1,6 @@
+
+* hiredisccc 1.0.0
+- Support Visual Studio 2017
+- Add RPM build spec file
+- Support compile on Cygwin
+- Support vcpkg build on Windows 10

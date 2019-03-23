@@ -1,0 +1,126 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="make">
+      <UniqueIdentifier>{560110e7-cdc6-4c05-8ffe-9cf86104a2aa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="make\docs">
+      <UniqueIdentifier>{db6a32c2-13ff-4dcd-9df9-6b8703ea7eba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="make\src">
+      <UniqueIdentifier>{1eda8add-4186-479a-856f-0cf0107bb7c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\adapters">
+      <UniqueIdentifier>{342dd872-960a-4c17-856c-636b8df5dcce}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="make\examples">
+      <UniqueIdentifier>{49b6c4fa-b9cb-4358-8904-4b036e73dacc}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\libhiredisccc\include\adlist.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\async.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\command.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\dict.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\fmacros.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\hiarray.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\hircluster.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\hiredis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\hiutil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\net.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\read.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\sds.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\adapters\ae.h">
+      <Filter>Header Files\adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\adapters\glib.h">
+      <Filter>Header Files\adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\adapters\libev.h">
+      <Filter>Header Files\adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\adapters\libevent.h">
+      <Filter>Header Files\adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\adapters\libuv.h">
+      <Filter>Header Files\adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\libhiredisccc\include\hiredis_exports.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\libhiredisccc\src\adlist.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libhiredisccc\src\async.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libhiredisccc\src\command.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libhiredisccc\src\crc16.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libhiredisccc\src\dict.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libhiredisccc\src\hiarray.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libhiredisccc\src\hiredis.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libhiredisccc\src\hiutil.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libhiredisccc\src\net.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libhiredisccc\src\read.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libhiredisccc\src\sds.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\libhiredisccc\src\hircluster.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
