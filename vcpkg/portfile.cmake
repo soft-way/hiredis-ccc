@@ -9,15 +9,16 @@ else()
 endif()
 
 include(vcpkg_common_functions)
-set(HIREDIS_CCC_ROOT ${CURRENT_BUILDTREES_DIR}/src/hiredisccc-1.0.0)
-set(ENV{HIREDIS_CCC_ROOT} ${HIREDIS_CCC_ROOT})
-set(SOURCE_PATH ${HIREDIS_CCC_ROOT})
-vcpkg_download_distfile(ARCHIVE
-    URLS "http://135.252.167.151/share/tools/hiredisccc-1.0.0.tar.gz"
-    FILENAME hiredisccc-1.0.0.tar.gz
-    SHA512 ad0a068083f45158c6b3295bbdaecfb43dd359155ae087f627eab19097983ac3db05fb380fbada8482f57e63f353371b829510f0af28245556b1ffd1236a9bbf
+
+vcpkg_from_github(
+    OUT_SOURCE_PATH SOURCE_PATH
+    REPO soft-way/hiredis-ccc
+    HEAD_REF <master>
+    REF v1.0.0
+    SHA512 ecf2c3f02f0507adab72785b45358578bfb01dc9139a71a9622d734b15afa3af3a07d83d422fc938ac527bb4e30da7f97fad3eeb76fafcb1255ad3cad2a08c09
 )
-vcpkg_extract_source_archive(${ARCHIVE})
+
+set(HIREDIS_CCC_ROOT ${SOURCE_PATH})
 
 if (TRIPLET_SYSTEM_ARCH MATCHES "arm")
     message(FATAL_ERROR "ARM is currently not supported.")
