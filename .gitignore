@@ -1,0 +1,6 @@
+
+build_msvc/.vs
+build_msvc/MSBuild.Debug.x64
+build_msvc/MSBuild.Release.x64
+build_msvc/MSBuild.Debug.Win32
+build_msvc/MSBuild.Release.Win32

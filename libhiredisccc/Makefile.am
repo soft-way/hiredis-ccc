@@ -1,27 +1,28 @@
 
 AM_CPPFLAGS = -I./include
-AM_LDFLAGS = 
+AM_LDFLAGS =
 
 AUTOMAKE_OPTIONS=foreign
 
-INC = include/adapters/ae.h \
-      include/adapters/glib.h \
-      include/adapters/libev.h \
-      include/adapters/libevent.h \
-      include/adapters/libuv.h \
-      include/adlist.h \
-      include/async.h \
-      include/command.h \
-      include/dict.h \
-      include/fmacros.h \
-      include/hiarray.h \
-      include/hircluster.h \
-      include/hiredis.h \
-      include/hiredis_exports.h \
-      include/hiutil.h \
-      include/net.h \
-      include/read.h \
-      include/sds.h
+INC1 = include/adapters/ae.h \
+       include/adapters/glib.h \
+       include/adapters/libev.h \
+       include/adapters/libevent.h \
+       include/adapters/libuv.h
+
+INC2 = include/adlist.h \
+       include/async.h \
+       include/command.h \
+       include/dict.h \
+       include/fmacros.h \
+       include/hiarray.h \
+       include/hircluster.h \
+       include/hiredis.h \
+       include/hiredis_exports.h \
+       include/hiutil.h \
+       include/net.h \
+       include/read.h \
+       include/sds.h
 
 SRC = src/adlist.c \
 	    src/async.c \
@@ -38,8 +39,11 @@ SRC = src/adlist.c \
 
 lib_LTLIBRARIES = libhiredisccc.la
 libhiredisccc_la_SOURCES = $(SRC)
-libhiredisccc_la_LDFLAGS = -version-info 1:0:0 
+libhiredisccc_la_LDFLAGS = -version-info 1:0:0
 libhiredisccc_la_AR = $(AR) -qcs
 
-includedir = $(prefix)
-nobase_include_HEADERS = $(INC)
+oneincludedir = $(prefix)/include/hiredisccc/adapters
+oneinclude_HEADERS = $(INC1)
+
+twoincludedir = $(prefix)/include/hiredisccc
+twoinclude_HEADERS = $(INC2)

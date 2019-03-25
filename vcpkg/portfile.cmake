@@ -46,11 +46,11 @@ vcpkg_build_msbuild(
 
 file(GLOB HEADER_FILES ${SOURCE_PATH}/libhiredisccc/include/*.h)
 file(INSTALL ${HEADER_FILES}
-     DESTINATION ${CURRENT_PACKAGES_DIR}/include)
+     DESTINATION ${CURRENT_PACKAGES_DIR}/include/hiredisccc)
 
 file(GLOB HEADER_FILES ${SOURCE_PATH}/libhiredisccc/include/adapters/*.h)
 file(INSTALL ${HEADER_FILES}
-     DESTINATION ${CURRENT_PACKAGES_DIR}/include/adapters)
+     DESTINATION ${CURRENT_PACKAGES_DIR}/include/hiredisccc/adapters)
 
 # Install the lib files
 file(INSTALL
