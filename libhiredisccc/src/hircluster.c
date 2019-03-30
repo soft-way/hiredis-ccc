@@ -19,9 +19,9 @@
 #define REDIS_COMMAND_ASKING "ASKING"
 #define REDIS_COMMAND_PING "PING"
 
-#define REDIS_PROTOCOL_ASKING "*1\r\n$6\r\nASKING\r\n"
+#define REDIS_PROTOCOL_PING "*1\r\n$4\r\nPING\r\n"
 
-#define IP_PORT_SEPARATOR ":"
+#define REDIS_PROTOCOL_ASKING "*1\r\n$6\r\nASKING\r\n"
 
 #define CLUSTER_ADDRESS_SEPARATOR ","
 
@@ -49,6 +49,7 @@ typedef enum CLUSTER_ERR_TYPE{
 static void cluster_node_deinit(cluster_node *node);
 static void cluster_slot_destroy(cluster_slot *slot);
 static void cluster_open_slot_destroy(copen_slot *oslot);
+static int get_host_port(char *str, int len, sds *host, int *port);
 
 void listClusterNodeDestructor(void *val)
 {
@@ -533,10 +534,7 @@ static cluster_node *node_get_with_nodes(
     redisClusterContext *cc,
     sds *node_infos, int info_count, uint8_t role)
 {
-    sds *ip_port = NULL;
-    int count_ip_port = 0;
     cluster_node *node;
-
     if(info_count < 8)
     {
         return NULL;
@@ -568,28 +566,12 @@ static cluster_node *node_get_with_nodes(
     
     node->name = node_infos[0]; 
     node->addr = node_infos[1];
-    
-    ip_port = sdssplitlen(node_infos[1], sdslen(node_infos[1]), 
-        IP_PORT_SEPARATOR, strlen(IP_PORT_SEPARATOR), &count_ip_port);
-    if(ip_port == NULL || count_ip_port != 2)
-    {
-        __redisClusterSetError(cc,REDIS_ERR_OTHER,
-            "split ip port error");
-        goto error;
-    }
-    node->host = ip_port[0];
-    int port_idx = 0;
-    while (port_idx < sdslen(ip_port[1]))
-    {
-        if (ip_port[1][port_idx] == '@')
-            break;
-        port_idx++;
-    }
-    node->port = hi_atoi(ip_port[1], port_idx);
+	if (!get_host_port(node_infos[1], sdslen(node_infos[1]), &(node->host), &(node->port)))
+	{
+		__redisClusterSetError(cc, REDIS_ERR_OTHER,
+			"split ip port error");
+	}
     node->role = role;
-
-    sdsfree(ip_port[1]);
-    free(ip_port);
 
     node_infos[0] = NULL;
     node_infos[1] = NULL;
@@ -597,17 +579,60 @@ static cluster_node *node_get_with_nodes(
     return node;
 
 error:
-    if(ip_port != NULL)
-    {
-        sdsfreesplitres(ip_port, count_ip_port);
-    }
-
     if(node != NULL)
     {
         hi_free(node);
     }
 
     return NULL;
+}
+
+static int get_host_port(char *str, int len, sds *host, int *port)
+{
+	/*
+       IPv4 port string: 192.168.40.10:7000@17000
+       IPv6 port string: [2001:192:168:40::1010]:7000@17000
+       IPv6 port string: 2001:192:168:40::1010:7000@17000
+	*/
+
+	char *last_colon = str + len;
+	char *port_begin;
+	while ((last_colon > str) && *last_colon != ':')
+		last_colon--;
+
+	if (*(last_colon-1) == ']') /* IPv6 */
+	{
+		last_colon--;
+
+		if (*str != '[')
+			return 0;
+
+		str++;
+		len--;
+		port_begin = last_colon + 2;
+	} else {
+		port_begin = last_colon + 1;
+	}
+
+	if (last_colon <= str)
+	{
+		return 0;
+	}
+
+	*host = sdsnewlen(str, last_colon - str);
+
+	char *end = port_begin;
+	while ((end < (str + len)) && (*end != '@'))
+		end++;
+
+	*port = hi_atoi(port_begin, (end - port_begin));
+	if (*port == 0)
+	{
+		sdsfree(host);
+		return 0;
+	}
+
+	return 1;
 }
 
 static void cluster_nodes_swap_ctx(dict *nodes_f, dict *nodes_t)
@@ -1352,7 +1377,7 @@ cluster_update_route_by_addr(redisClusterContext *cc,
             goto error;
         }
 
-        fprintf(stdout, "Reply: <%s>\n", reply->str);
+        // fprintf(stdout, "Reply: <%s>\n", reply->str);
         nodes = parse_cluster_nodes(cc, reply->str, reply->len, cc->flags);
     }
 
@@ -2193,10 +2218,6 @@ int redisClusterSetOptionAddNode(redisClusterContext *cc, const char *addr)
 {
     dictEntry *node_entry;
     cluster_node *node;
-    sds *ip_port = NULL;
-    int ip_port_count = 0;
-    sds ip;
-    int port;
     sds addr_sds = NULL;
     
     if(cc == NULL)
@@ -2216,34 +2237,15 @@ int redisClusterSetOptionAddNode(redisClusterContext *cc, const char *addr)
     addr_sds = sdsnew(addr);
     node_entry = dictFind(cc->nodes, addr_sds);
     sdsfree(addr_sds);
-    if(node_entry == NULL)
+    if (node_entry == NULL)
     {
-        ip_port = sdssplitlen(addr, strlen(addr), 
-            IP_PORT_SEPARATOR, strlen(IP_PORT_SEPARATOR), &ip_port_count);
-        if(ip_port == NULL || ip_port_count != 2 || 
-            sdslen(ip_port[0]) <= 0 || sdslen(ip_port[1]) <= 0)
-        {
-            if(ip_port != NULL)
-            {
-                sdsfreesplitres(ip_port, ip_port_count);
-            }
-            __redisClusterSetError(cc,REDIS_ERR_OTHER,"server address is error(correct is like: 127.0.0.1:1234)");
-            return REDIS_ERR;
-        }
-
-        ip = ip_port[0];
-        port = hi_atoi(ip_port[1], sdslen(ip_port[1]));
-
-        if(port <= 0)
-        {
-            sdsfreesplitres(ip_port, ip_port_count);
-            __redisClusterSetError(cc,REDIS_ERR_OTHER,"server port is error");
-            return REDIS_ERR;
-        }
-
-        sdsfree(ip_port[1]);
-        free(ip_port);
-        ip_port = NULL;
+		sds ip = NULL;
+		int port = 0;
+		if (!get_host_port(addr, strlen(addr), &ip, &port))
+		{
+			__redisClusterSetError(cc, REDIS_ERR_OTHER, "server address is error(correct is like: 127.0.0.1:1234)");
+			return REDIS_ERR;
+		}
     
         node = hi_alloc(sizeof(cluster_node));
         if(node == NULL)
@@ -4766,7 +4768,10 @@ int redisClusterAsyncFormattedCommand(redisClusterAsyncContext *acc,
 
     commands->free = listCommandFree;
 
-    slot_num = command_format_by_slot(cc, command, commands);
+    if (strncmp(REDIS_PROTOCOL_PING, command->cmd, command->clen) == 0)
+        slot_num = 0;
+    else
+        slot_num = command_format_by_slot(cc, command, commands);
 
     if(slot_num < 0)
     {

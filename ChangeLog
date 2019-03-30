@@ -4,3 +4,6 @@
 - Add RPM build spec file
 - Support compile on Cygwin
 - Support vcpkg build on Windows 10
+- Add source port in redisContext tcp struct and support IPv6
+- Support PING in redisClusterAsyncFormattedCommand etc.
+- Fix IPv6 in command input and cluster nodes info

@@ -436,6 +436,44 @@ addrretry:
                     goto error;
             }
         }
+
+        // get my ip address and port
+        char my_ip[128];
+        unsigned int my_port;
+        if (hints.ai_family == AF_INET) {
+            struct sockaddr_in my_addr_v4;
+            memset(&my_addr_v4, 0, sizeof(my_addr_v4));
+            int len = sizeof(my_addr_v4);
+            if (getsockname(s, (struct sockaddr *) &my_addr_v4, &len) < 0) {
+                char buf[128];
+                snprintf(buf, sizeof(buf), "getsockname: %s\n", strerror(errno));
+                __redisSetError(c, REDIS_ERR_OTHER, buf);
+                goto error;
+            }
+            inet_ntop(hints.ai_family, &my_addr_v4.sin_addr, my_ip, sizeof(my_ip));
+            my_port = ntohs(my_addr_v4.sin_port);
+        } else {
+            struct sockaddr_in6 my_addr_v6;
+            memset(&my_addr_v6, 0, sizeof(my_addr_v6));
+            int len = sizeof(my_addr_v6);
+            if (getsockname(s, (struct sockaddr *) &my_addr_v6, &len) < 0) {
+                char buf[128];
+                snprintf(buf, sizeof(buf), "getsockname: %s\n", strerror(errno));
+                __redisSetError(c, REDIS_ERR_OTHER, buf);
+                goto error;
+            }
+            inet_ntop(hints.ai_family, &my_addr_v6.sin6_addr, my_ip, sizeof(my_ip));
+            my_port = ntohs(my_addr_v6.sin6_port);
+        }
+        if (!(c->tcp.source_addr)) {
+#ifdef _WIN32
+            c->tcp.source_addr = _strdup(my_ip);
+#else
+            c->tcp.source_addr = strdup(my_ip);
+#endif
+        }
+        c->tcp.source_port = my_port;
+
         if (blocking && redisSetBlocking(c,1) != REDIS_OK)
             goto error;
         if (redisSetTcpNoDelay(c) != REDIS_OK)
