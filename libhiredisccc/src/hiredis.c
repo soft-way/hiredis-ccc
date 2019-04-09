@@ -609,7 +609,16 @@ static redisContext *redisContextInit(void) {
     c->tcp.host = NULL;
     c->tcp.source_addr = NULL;
     c->unix_sock.path = NULL;
-    c->timeout = NULL;
+
+    struct timeval *timeout = malloc(sizeof(struct timeval));
+    if (timeout == NULL) {
+        redisFree(c);
+        return NULL;
+    }
+    memset(timeout, 0, sizeof(struct timeval));
+    timeout->tv_sec = REDIS_TIMEOUT;
+    timeout->tv_usec = 0;
+    c->timeout = timeout;
 
     if (c->obuf == NULL || c->reader == NULL) {
         redisFree(c);
@@ -691,7 +700,7 @@ redisContext *redisConnect(const char *ip, int port) {
         return NULL;
 
     c->flags |= REDIS_BLOCK;
-    redisContextConnectTcp(c,ip,port,NULL);
+    redisContextConnectTcp(c, ip, port, c->timeout);
     return c;
 }
 

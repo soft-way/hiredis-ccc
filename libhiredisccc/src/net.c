@@ -82,7 +82,12 @@ static void __redisSetErrorFromErrno(redisContext *c, int type, const char *pref
 
     if (prefix != NULL)
         len = snprintf(buf,sizeof(buf),"%s: ",prefix);
+#ifdef _WIN32
+    if (errno == ETIMEDOUT)
+        sprintf((char *)(buf + len), "%s", "Connection timed out");
+#else
     __redis_strerror_r(errno, (char *)(buf + len), sizeof(buf) - len);
+#endif
     __redisSetError(c,type,buf);
 }
 
@@ -260,7 +265,7 @@ static int redisContextWaitReady(redisContext *c, const struct timeval *timeout)
             return REDIS_ERR;
         } else if (res == 0) {
             errno = ETIMEDOUT;
-            __redisSetErrorFromErrno(c,REDIS_ERR_IO,NULL);
+            __redisSetErrorFromErrno(c, REDIS_ERR_IO, NULL);
             redisContextCloseFd(c);
             return REDIS_ERR;
         }

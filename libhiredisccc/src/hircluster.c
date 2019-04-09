@@ -34,7 +34,7 @@ typedef struct cluster_async_data
     redisClusterCallbackFn *callback;
     int retry_count;
     void *privdata;
-}cluster_async_data;
+} cluster_async_data;
 
 typedef enum CLUSTER_ERR_TYPE{
     CLUSTER_NOT_ERR = 0,
@@ -44,7 +44,7 @@ typedef enum CLUSTER_ERR_TYPE{
     CLUSTER_ERR_CROSSSLOT,
     CLUSTER_ERR_CLUSTERDOWN,
     CLUSTER_ERR_SENTINEL
-}CLUSTER_ERR_TYPE;
+} CLUSTER_ERR_TYPE;
 
 static void cluster_node_deinit(cluster_node *node);
 static void cluster_slot_destroy(cluster_slot *slot);
@@ -2591,20 +2591,35 @@ static cluster_node *node_get_by_slot(redisClusterContext *cc, uint32_t slot_num
 }
 
 
-static cluster_node *node_get_by_table(redisClusterContext *cc, uint32_t slot_num)
+static cluster_node *node_get_by_table(redisClusterContext *cc, uint32_t slot_num, int role)
 {   
     if(cc == NULL)
     {
         return NULL;
     }
 
-    if(slot_num >= REDIS_CLUSTER_SLOTS)
+	if(slot_num >= REDIS_CLUSTER_SLOTS)
     {
         return NULL;
     }
 
-    return cc->table[slot_num];
-    
+	cluster_node *node = cc->table[slot_num];
+	if (!(cc->flags & HIRCLUSTER_FLAG_SPLIT_READ_WRITE) || 
+			(role == REDIS_ROLE_MASTER) ||
+			(node == NULL) || node->slaves == NULL)
+		return node;
+
+	if (node->slaves->tail == node->slaves->head) // one slave
+		return node->slaves->head->value;
+
+	cluster_node *return_node = node->slaves->head->value;
+
+	node->slaves->tail->next = node->slaves->head;
+	node->slaves->head->prev = node->slaves->tail;
+	node->slaves->head = node->slaves->head->next;
+	node->slaves->head->prev = NULL;
+
+	return return_node;
 }
 
 static cluster_node *node_get_witch_connected(redisClusterContext *cc)
@@ -2819,6 +2834,27 @@ error:
  * is used, you need to call redisGetReply yourself to retrieve
  * the reply (or replies in pub/sub).
  */
+int get_role_from_command(redisClusterContext *cc, struct cmd *command) {
+	if (cc == NULL || command == NULL)
+	{
+		return REDIS_ERR;
+	}
+
+	if (!(cc->flags & HIRCLUSTER_FLAG_SPLIT_READ_WRITE))
+		return REDIS_ROLE_MASTER;
+
+    if (command->type == CMD_REQ_REDIS_GET)
+		return REDIS_ROLE_SLAVE;
+
+	return REDIS_ROLE_MASTER;
+}
+
+/* Helper function for the redisClusterAppendCommand* family of functions.
+ *
+ * Write a formatted command to the output buffer. When this family
+ * is used, you need to call redisGetReply yourself to retrieve
+ * the reply (or replies in pub/sub).
+ */
 static int __redisClusterAppendCommand(redisClusterContext *cc, 
     struct cmd *command) {
 
@@ -2830,7 +2866,8 @@ static int __redisClusterAppendCommand(redisClusterContext *cc,
         return REDIS_ERR;
     }
     
-    node = node_get_by_table(cc, (uint32_t)command->slot_num);
+	int role = get_role_from_command(cc, command);
+    node = node_get_by_table(cc, (uint32_t)command->slot_num, role);
     if(node == NULL)
     {
         __redisClusterSetError(cc, REDIS_ERR_OTHER, "node get by slot error");
@@ -2860,7 +2897,7 @@ static int __redisClusterAppendCommand(redisClusterContext *cc,
 
 /* Helper function for the redisClusterGetReply* family of functions.
  */
-static int __redisClusterGetReply(redisClusterContext *cc, int slot_num, void **reply)
+static int __redisClusterGetReply(redisClusterContext *cc, int slot_num, void **reply, struct cmd *command)
 {
     cluster_node *node;
     redisContext *c;
@@ -2870,7 +2907,8 @@ static int __redisClusterGetReply(redisClusterContext *cc, int slot_num, void **
         return REDIS_ERR;
     }
 
-    node = node_get_by_table(cc, (uint32_t)slot_num);
+	int role = get_role_from_command(cc, command);
+    node = node_get_by_table(cc, (uint32_t)slot_num, role);
     if(node == NULL)
     {
         __redisClusterSetError(cc, REDIS_ERR_OTHER, "node get by table is null");
@@ -3013,10 +3051,11 @@ static void *redis_cluster_command_execute(redisClusterContext *cc,
     cluster_node *node;
     redisContext *c = NULL;
     int error_type;
+    int role;
 
 retry:
-    
-    node = node_get_by_table(cc, (uint32_t)command->slot_num);
+	role = get_role_from_command(cc, command);
+    node = node_get_by_table(cc, (uint32_t)command->slot_num, role);
     if(node == NULL)
     {
         __redisClusterSetError(cc, REDIS_ERR_OTHER, "node get by table error");
@@ -4124,7 +4163,7 @@ int redisClusterGetReply(redisClusterContext *cc, void **reply) {
     if(slot_num >= 0)
     {
         listDelNode(cc->requests, list_command);
-        return __redisClusterGetReply(cc, slot_num, reply);
+        return __redisClusterGetReply(cc, slot_num, reply, command);
     }
 
     commands = command->sub_commands;
@@ -4156,7 +4195,7 @@ int redisClusterGetReply(redisClusterContext *cc, void **reply) {
             goto error;
         }
         
-        if(__redisClusterGetReply(cc, slot_num, &sub_reply) != REDIS_OK)
+        if(__redisClusterGetReply(cc, slot_num, &sub_reply, sub_command) != REDIS_OK)
         {
             goto error;
         }
@@ -4237,7 +4276,16 @@ static void __redisClusterAsyncCopyError(redisClusterAsyncContext *acc) {
     memcpy(acc->errstr, cc->errstr, 128);
 }
 
-static void __redisClusterAsyncSetError(redisClusterAsyncContext *acc, 
+static void __redisClusterAsyncAppendError(redisClusterAsyncContext *acc, redisAsyncContext *ac) {
+    if (!acc || !ac)
+        return;
+
+    int len = strlen(acc->errstr);
+    acc->errstr[len] = '\n';
+    memcpy(acc->errstr+len+1, ac->errstr, 128);
+}
+
+static void __redisClusterAsyncSetError(redisClusterAsyncContext *acc,
     int type, const char *str) {
     
     size_t len;
@@ -4381,14 +4429,14 @@ redisAsyncContext * actx_get_by_node(redisClusterAsyncContext *acc,
 }
 
 static redisAsyncContext *actx_get_after_update_route_by_slot(
-    redisClusterAsyncContext *acc, int slot_num)
+    redisClusterAsyncContext *acc, struct cmd* command)
 {
     int ret;
     redisClusterContext *cc;
     redisAsyncContext *ac;
     cluster_node *node;
 
-    if(acc == NULL || slot_num < 0)
+    if(acc == NULL || command == NULL < 0)
     {
         return NULL;
     }
@@ -4407,7 +4455,8 @@ static redisAsyncContext *actx_get_after_update_route_by_slot(
         return NULL;
     }
 
-    node = node_get_by_table(cc, (uint32_t)slot_num);
+	int role = get_role_from_command(cc, command);
+    node = node_get_by_table(cc, (uint32_t)command->slot_num, role);
     if(node == NULL)
     {
         __redisClusterAsyncSetError(acc, 
@@ -4453,6 +4502,45 @@ redisClusterAsyncContext *redisClusterAsyncConnect(const char *addrs, int flags)
     return acc;
 }
 
+int redisClusterAsyncConnectNodes(redisClusterAsyncContext *acc)
+{
+    cluster_node *node;
+    dictIterator *it;
+    dictEntry *de;
+    redisAsyncContext *ac;
+    int ret_code = 1;
+    it = dictGetIterator(acc->cc->nodes);
+    while ((de = dictNext(it)) != NULL)
+    {
+        node = dictGetEntryVal(de);
+        ac = actx_get_by_node(acc, node);
+        if (ac == NULL) {
+            ret_code = 0;
+            __redisClusterAsyncAppendError(acc, ac);
+            break;
+        }
+
+		if ((acc->cc->flags & HIRCLUSTER_FLAG_ADD_SLAVE) && (node->slaves != NULL)) {
+			struct listNode *current_node = node->slaves->head;
+			while(current_node) {
+				ac = actx_get_by_node(acc, current_node->value);
+				if (ac == NULL) {
+					ret_code = 0;
+					__redisClusterAsyncAppendError(acc, ac);
+					break;
+				}
+
+				if (current_node == node->slaves->tail)
+					break;
+
+				current_node = current_node->next;
+			};
+		}
+    }
+    dictReleaseIterator(it);
+
+    return ret_code;
+}
 
 int redisClusterAsyncSetConnectCallback(
     redisClusterAsyncContext *acc, redisConnectCallback *fn) 
@@ -4610,7 +4698,7 @@ static void redisClusterAsyncCallback(redisAsyncContext *ac, void *r, void *priv
         switch(error_type)
         {
         case CLUSTER_ERR_MOVED:
-            ac_retry = actx_get_after_update_route_by_slot(acc, command->slot_num);
+            ac_retry = actx_get_after_update_route_by_slot(acc, command);
             if(ac_retry == NULL)
             {
                 goto done;
@@ -4796,7 +4884,8 @@ int redisClusterAsyncFormattedCommand(redisClusterAsyncContext *acc,
         goto error;
     }
 
-    node = node_get_by_table(cc, (uint32_t) slot_num);
+	int role = get_role_from_command(cc, command);
+    node = node_get_by_table(cc, (uint32_t) slot_num, role);
     if(node == NULL)
     {
         __redisClusterAsyncSetError(acc, 
@@ -4956,6 +5045,25 @@ void redisClusterAsyncDisconnect(redisClusterAsyncContext *acc) {
         redisAsyncDisconnect(ac);
 
         node->acon = NULL;
+
+        if ((acc->cc->flags & HIRCLUSTER_FLAG_SPLIT_READ_WRITE) && (node->slaves))
+        {
+            struct listNode *current_node = node->slaves->head;
+            while (current_node)
+            {
+                node = current_node->value;
+                ac = node->acon;
+                if (ac != NULL && !(ac->err))
+                {
+                    redisAsyncDisconnect(ac);
+                    node->acon = NULL;
+                }
+                if (current_node == node->slaves->tail)
+                    break;
+                else
+                    current_node = current_node->next;
+            }
+        }
     }
 }
 

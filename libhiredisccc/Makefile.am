@@ -1,5 +1,5 @@
 
-AM_CPPFLAGS = -I./include
+AM_CPPFLAGS = -O2 -g -I./include
 AM_LDFLAGS =
 
 AUTOMAKE_OPTIONS=foreign

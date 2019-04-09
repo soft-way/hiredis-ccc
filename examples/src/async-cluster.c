@@ -63,7 +63,9 @@ int main(int argc, char **argv)
 #endif
 
     base = event_base_new();
-	redisClusterAsyncContext *acc = redisClusterAsyncConnect(argv[1]? argv[1]: "135.251.249.241:7000", HIRCLUSTER_FLAG_NULL);
+	redisClusterAsyncContext *acc = redisClusterAsyncConnect(argv[1]? argv[1]: "192.168.40.10:7000",
+		HIRCLUSTER_FLAG_ADD_SLAVE| HIRCLUSTER_FLAG_SPLIT_READ_WRITE);
+    // HIRCLUSTER_FLAG_SPLIT_READ_WRITE
 	if (acc->err)
 	{
 		printf("Error: %s\n", acc->errstr);
@@ -72,6 +74,7 @@ int main(int argc, char **argv)
 	redisClusterLibeventAttach(acc,base);
 	redisClusterAsyncSetConnectCallback(acc,connectCallback);
 	redisClusterAsyncSetDisconnectCallback(acc,disconnectCallback);
+    //redisClusterAsyncConnectNodes(acc);
 
     /*
     int count = 1;
@@ -83,10 +86,17 @@ int main(int argc, char **argv)
     */
 
     int count[20];
-    for (i = 0; i < 20; i++)
+    for (i = 0; i < 1; i++)
     {
         count[i] = i;
+        /*
         status = redisClusterAsyncCommand(acc, getCallback, &count, "set %d %d", i, i);
+        if (status != REDIS_OK)
+        {
+            printf("error: %d %s\n", acc->err, acc->errstr);
+        }
+                           */
+        status = redisClusterAsyncCommand(acc, getCallback, &count, "get %d", i);
         if (status != REDIS_OK)
         {
             printf("error: %d %s\n", acc->err, acc->errstr);
@@ -94,6 +104,7 @@ int main(int argc, char **argv)
     }
 
     event_base_dispatch(base);
+
 #ifdef _WIN32
     WSACleanup();
 #endif

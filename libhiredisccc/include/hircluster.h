@@ -35,6 +35,11 @@
   * is 'cluster nodes' command.*/
 #define HIRCLUSTER_FLAG_ROUTE_USE_SLOTS     0x4000
 
+/* The flag to decide whether get the route
+  * table by 'cluster slots' command. Default
+  * is 'cluster nodes' command.*/
+#define HIRCLUSTER_FLAG_SPLIT_READ_WRITE    0x8000
+
 struct dict;
 struct hilist;
 
@@ -181,6 +186,7 @@ typedef struct redisClusterAsyncContext {
 } redisClusterAsyncContext;
 
 redisClusterAsyncContext HIREDIS_EXPORT *redisClusterAsyncConnect(const char *addrs, int flags);
+int HIREDIS_EXPORT redisClusterAsyncConnectNodes(redisClusterAsyncContext *acc);
 int HIREDIS_EXPORT redisClusterAsyncSetConnectCallback(redisClusterAsyncContext *acc, redisConnectCallback *fn);
 int HIREDIS_EXPORT redisClusterAsyncSetDisconnectCallback(redisClusterAsyncContext *acc, redisDisconnectCallback *fn);
 int HIREDIS_EXPORT redisClusterAsyncFormattedCommand(redisClusterAsyncContext *acc, redisClusterCallbackFn *fn, void *privdata, char *cmd, int len);

@@ -56,6 +56,10 @@
 #define HIREDIS_MINOR 13
 #define HIREDIS_PATCH 1
 
+/* Connection timeout
+ * */
+#define REDIS_TIMEOUT 5
+
 /* Connection type can be blocking or non-blocking and is set in the
  * least significant bit of the flags field in redisContext. */
 #define REDIS_BLOCK 0x1
